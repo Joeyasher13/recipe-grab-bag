@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-const LOCAL_STORAGE_KEY = 'recipeGrabBag';
+const SERVER_URL = 'https://recipe-grab-bag-server.onrender.com';
 
 export default function App() {
   const [input, setInput] = useState('');
@@ -8,35 +8,50 @@ export default function App() {
   const [triedRecipes, setTriedRecipes] = useState([]);
   const [viewTried, setViewTried] = useState(false);
 
+  const fetchRecipes = async () => {
+    const res = await fetch(`${SERVER_URL}/recipes`);
+    const data = await res.json();
+    setRecipes(data.recipes || []);
+    setTriedRecipes(data.triedRecipes || []);
+  };
+
   useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY)) || {};
-    setRecipes(saved.recipes || []);
-    setTriedRecipes(saved.triedRecipes || []);
+    fetchRecipes();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ recipes, triedRecipes }));
-  }, [recipes, triedRecipes]);
-
-  const addRecipe = () => {
+  const addRecipe = async () => {
     if (input.trim()) {
-      setRecipes([...recipes, input.trim()]);
+      await fetch(`${SERVER_URL}/recipes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: input.trim() })
+      });
       setInput('');
+      fetchRecipes();
     }
   };
 
-  const pickRandomRecipe = () => {
+  const pickRandomRecipe = async () => {
     if (!recipes.length) return;
     const idx = Math.floor(Math.random() * recipes.length);
     const selected = recipes[idx];
-    const updated = [...recipes];
-    updated.splice(idx, 1);
-    setRecipes(updated);
-    setTriedRecipes([...triedRecipes, { url: selected, notes: '', rating: 0 }]);
+
+    await fetch(`${SERVER_URL}/try`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: selected })
+    });
+
     window.open(selected, '_blank');
+    fetchRecipes();
   };
 
-  const updateTried = (index, key, value) => {
+  const updateTried = async (index, key, value) => {
+    await fetch(`${SERVER_URL}/tried/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ index, key, value })
+    });
     const updated = [...triedRecipes];
     updated[index][key] = value;
     setTriedRecipes(updated);
