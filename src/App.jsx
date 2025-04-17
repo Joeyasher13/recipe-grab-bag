@@ -9,10 +9,14 @@ export default function App() {
   const [viewTried, setViewTried] = useState(false);
 
   const fetchRecipes = async () => {
-    const res = await fetch(`${SERVER_URL}/recipes`);
-    const data = await res.json();
-    setRecipes(data.recipes || []);
-    setTriedRecipes(data.triedRecipes || []);
+    try {
+      const res = await fetch(`${SERVER_URL}/recipes`);
+      const data = await res.json();
+      setRecipes(data.recipes || []);
+      setTriedRecipes(data.triedRecipes || []);
+    } catch (err) {
+      console.error('Failed to fetch recipes:', err);
+    }
   };
 
   useEffect(() => {
@@ -21,13 +25,17 @@ export default function App() {
 
   const addRecipe = async () => {
     if (input.trim()) {
-      await fetch(`${SERVER_URL}/recipes`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: input.trim() })
-      });
-      setInput('');
-      fetchRecipes();
+      try {
+        await fetch(`${SERVER_URL}/recipes`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: input.trim() })
+        });
+        setInput('');
+        fetchRecipes();
+      } catch (err) {
+        console.error('Failed to add recipe:', err);
+      }
     }
   };
 
@@ -39,10 +47,10 @@ export default function App() {
     await fetch(`${SERVER_URL}/try`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: selected })
+      body: JSON.stringify({ url: selected.url })
     });
 
-    window.open(selected, '_blank');
+    window.open(selected.url, '_blank');
     fetchRecipes();
   };
 
@@ -95,13 +103,20 @@ export default function App() {
               🎲 Pick a Random Recipe
             </button>
 
-            <p className="mt-4 text-sm text-gray-600">You have {recipes.length} saved recipe{recipes.length !== 1 ? 's' : ''}.</p>
+            <p className="mt-4 text-sm text-gray-600">
+              You have {recipes.length} saved recipe{recipes.length !== 1 ? 's' : ''}.
+            </p>
 
             <div className="mt-6 space-y-4">
-              {recipes.map((url, idx) => (
-                <div key={idx} className="bg-white p-4 rounded shadow-md border border-gray-200">
-                  <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">
-                    {url}
+              {recipes.map((item, idx) => (
+                <div key={item._id || idx} className="bg-white p-4 rounded shadow-md border border-gray-200">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline break-all"
+                  >
+                    {item.url}
                   </a>
                 </div>
               ))}
@@ -113,8 +128,13 @@ export default function App() {
             {triedRecipes.length === 0 && <p className="text-gray-500">No recipes tried yet.</p>}
             <div className="space-y-6">
               {triedRecipes.map((item, idx) => (
-                <div key={idx} className="bg-white p-4 rounded shadow-md border border-gray-200">
-                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline break-all">
+                <div key={item._id || idx} className="bg-white p-4 rounded shadow-md border border-gray-200">
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 underline break-all"
+                  >
                     {item.url}
                   </a>
                   <textarea
